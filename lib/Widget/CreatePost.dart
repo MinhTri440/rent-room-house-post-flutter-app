@@ -5,6 +5,13 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:post_house_rent_app/MongoDb_Connect.dart';
+import 'package:post_house_rent_app/Widget/ShowPost.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../model/Post.dart';
+import 'AccountManager.dart';
+import 'LoginScreen.dart';
 
 class UpPost extends StatefulWidget {
   @override
@@ -14,8 +21,51 @@ class UpPost extends StatefulWidget {
 class _UpPostState extends State<UpPost> {
   void initState() {
     super.initState();
+    check_if_already_login();
     fetchProvinces();
   }
+
+  late String username = 'nologin';
+  late String imageUrl = 'nologin';
+  late String email = 'nologin';
+  void check_if_already_login() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
+    var checklogin = (prefs.getBool('login') ?? true);
+    print(checklogin);
+    if (checklogin == false) {
+      _loadUserData();
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      username = prefs.getString('username') ?? 'User';
+      imageUrl = prefs.getString('image')!;
+      email = prefs.getString('email')!;
+    });
+  }
+  //String _selectedType
+  //String _selectedRoomType
+  //String _areaController
+  //String _priceController
+  //_List<String> selectedAmenitiesNames
+  //  String selectedProvince;
+  //   String selectedDistrict;
+  //   String selectedCommune;
+  //String _streetController;
+  //String? _houseController
+  // String _topicController;
+  // String _phoneController
+  // String? _zalophoneController
+  //String? _facebooklinkController
+  //String _descriptionController
+  //String _emailOwner
+  //List<String> _imageUrls;
+  //String? _videoURL;
+  //Date createAt
+  //Date updateAt
 
   //THông tin
   int _currentStep = 0;
@@ -36,6 +86,12 @@ class _UpPostState extends State<UpPost> {
   ];
   List<bool> selectedAmenities = List.generate(9, (index) => false);
   List<String> selectedAmenitiesNames = [];
+  bool isInteger(String? s) {
+    if (s == null) {
+      return false;
+    }
+    return int.tryParse(s) != null;
+  }
 
   //Dia chi
   String? selectedProvince;
@@ -46,9 +102,9 @@ class _UpPostState extends State<UpPost> {
   List<dynamic> communes = [];
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _houseController = TextEditingController();
-  String? selectedProvinceName;
-  String? selectedDistrictName;
-  String? selectedCommuneName;
+  String selectedProvinceName = '';
+  String selectedDistrictName = '';
+  String selectedCommuneName = '';
 
   Future<void> fetchProvinces() async {
     final response = await http
@@ -129,153 +185,533 @@ class _UpPostState extends State<UpPost> {
     }
   }
 
+  File? _selectedVideo;
+  void pickVideo() async {
+    // Logic để chọn video từ thiết bị
+    final pickedFile =
+        await ImagePicker().pickVideo(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedVideo = File(pickedFile.path);
+      });
+    }
+  }
+
+  List<String> _imageUrls = [];
+  String? _videoURL;
+  Future<void> _uploadImages(String email) async {
+    for (int i = 0; i < _selectedImages.length; i++) {
+      File? image = _selectedImages[i];
+      if (image != null) {
+        String filename =
+            '${email}_hinh${i + 1}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        String? imageUrl = await _uploadFile(image, 'images/$filename');
+        if (imageUrl != null) {
+          setState(() {
+            _imageUrls.add(imageUrl);
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _uploadVideo(String email) async {
+    if (_selectedVideo != null) {
+      String filename =
+          '${email}_video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      String? videoUrl = await _uploadFile(_selectedVideo!, 'videos/$filename');
+      if (videoUrl != null) {
+        setState(() {
+          _videoURL = videoUrl;
+        });
+      }
+    }
+  }
+
+  Future<String?> _uploadFile(File file, String path) async {
+    try {
+      TaskSnapshot snapshot =
+          await FirebaseStorage.instance.ref(path).putFile(file);
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Flutter Stepper Demo'),
       ),
-      body: Stepper(
-        type: StepperType.horizontal,
-        currentStep: _currentStep,
-        onStepContinue: () {
-          if (_currentStep == 0) {
-            print(_selectedType);
-            print(_selectedRoomType);
-            print(_priceController.text);
-            print(_areaController.text);
-            print(selectedAmenitiesNames);
-            // Kiểm tra xem giá phòng và diện tích đã được nhập chưa
-            if (_areaController.text.isEmpty || _priceController.text.isEmpty) {
-              // Thông báo yêu cầu người dùng nhập giá phòng và diện tích
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Thông báo'),
-                    content: Text('Vui lòng nhập giá phòng và diện tích.'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('Đóng'),
-                      ),
-                    ],
-                  );
-                },
-              );
-              return;
-            }
-          }
-          if (_currentStep == 1) {
-            print(selectedProvinceName);
-            print(selectedDistrictName);
-            print(selectedCommuneName);
-            print(_streetController.text);
-            print(_houseController.text);
-            if (selectedProvinceName == null ||
-                selectedDistrictName == null ||
-                selectedCommuneName == null ||
-                _streetController.text.isEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Thông báo'),
-                    content: Text(
-                        'Vui lòng chọn tỉnh, huyện, xã , hẻm, tên đường nơi cho thuê.'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('Đóng'),
-                      ),
-                    ],
-                  );
-                },
-              );
-              return;
-            }
-          }
-          if (_currentStep == 2) {
-            if (_selectedImages.isEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Thông báo'),
-                    content: Text('Vui lòng chọn hình ảnh cho bài đăng '),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('Đóng'),
-                      ),
-                    ],
-                  );
-                },
-              );
-              return;
-            }
-          }
-          // Nếu không có lỗi, tiếp tục tới bước tiếp theo
-          if (_currentStep < _getSteps().length - 1) {
-            setState(() {
-              _currentStep += 1;
-            });
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() {
-              _currentStep -= 1;
-            });
-          }
-        },
-        steps: _getSteps(),
-        controlsBuilder: (BuildContext context, ControlsDetails controls) {
-          return Row(
-            children: <Widget>[
-              TextButton(
-                onPressed: controls.onStepContinue,
-                style: ButtonStyle(
-                  backgroundColor:
-                      MaterialStateProperty.all<Color>(Colors.blue),
-                ),
-                child: const Text(
-                  'Tiếp tục',
-                  style: TextStyle(color: Colors.white),
-                ),
+      body: username == 'nologin' && email == 'nologin'
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 20),
+                  Text(
+                    'Yêu cầu đăng nhập để sử dụng chức năng này.',
+                    style: TextStyle(color: Colors.teal),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                      );
+                    },
+                    child: Text('Đăng nhập'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.tealAccent,
+                      foregroundColor: Colors.teal,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 8),
-              TextButton(
-                onPressed: controls.onStepCancel,
-                style: ButtonStyle(
-                  backgroundColor:
-                      MaterialStateProperty.all<Color>(Colors.blue),
-                ),
-                child: const Text(
-                  'Quay lại',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+            )
+          : Stepper(
+              type: StepperType.horizontal,
+              currentStep: _currentStep,
+              onStepContinue: () async {
+                if (_currentStep == 0) {
+                  print(_selectedType);
+                  print(_selectedRoomType);
+                  print(_priceController.text);
+                  print(_areaController.text);
+                  print(selectedAmenitiesNames);
+                  // Kiểm tra xem giá phòng và diện tích đã được nhập chưa
+                  if (_areaController.text.isEmpty ||
+                      _priceController.text.isEmpty) {
+                    // Thông báo yêu cầu người dùng nhập giá phòng và diện tích
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content:
+                              Text('Vui lòng nhập giá phòng và diện tích.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                  // Kiểm tra xem area và price có phải là số không
+                  if (!isInteger(_areaController.text) ||
+                      !isInteger(_priceController.text)) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text('Diện tích và giá phòng phải là số.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                  if (int.parse(_areaController.text) < 10 ||
+                      int.parse(_priceController.text) < 100000) {
+                    // Thông báo yêu cầu người dùng nhập giá phòng và diện tích
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text(
+                              'Vui lòng nhập giá phòng >100.000 vnd  và diện tích >10m2.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                }
+                if (_currentStep == 1) {
+                  print(selectedProvinceName);
+                  print(selectedDistrictName);
+                  print(selectedCommuneName);
+                  print(_streetController.text);
+                  print(_houseController.text);
+                  if (selectedProvinceName == null ||
+                      selectedDistrictName == null ||
+                      selectedCommuneName == null ||
+                      _streetController.text.isEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text(
+                              'Vui lòng chọn tỉnh, huyện, xã , hẻm, tên đường nơi cho thuê.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                }
+                if (_currentStep == 2) {
+                  if (_selectedImages.isEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text('Vui lòng chọn hình ảnh cho bài đăng '),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                }
+                if (_currentStep == 3) {
+                  if (_topicController.text.isEmpty ||
+                      _topicController.text.length < 20) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text(
+                              'Vui lòng nhập tiêu đề và tiêu đề tối thiểu 20 kí tự '),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                  if (_phoneController.text.isEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content:
+                              Text('Vui lòng nhập số điện thoại liên lạc '),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
+                  if (!_phoneController.text.isEmpty) {
+                    bool checkphone = isPhoneNumber(_phoneController.text);
+                    if (checkphone == false) {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Thông báo'),
+                            content: Text(
+                                'Nội dung số điện thoại liên lạc bạn nhập không phải sô điện thoại'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Đóng'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return;
+                    }
+                  }
+                  if (_zalophoneController.text.isEmpty == false) {
+                    bool checkphone = isPhoneNumber(_zalophoneController.text);
+                    if (checkphone == false) {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Thông báo'),
+                            content: Text(
+                                'Nội dung số điện thoại zalo không phải là số điện thoại'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Đóng'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return;
+                    }
+                  }
+                  if (_facebooklinkController.text.isEmpty == false) {
+                    bool checkurl = isURL(_facebooklinkController.text);
+                    if (checkurl == false) {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Thông báo'),
+                            content:
+                                Text('Vui lòng nhập đúng định dạng địa chỉ'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Đóng'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return;
+                    }
+                  }
+                  if (_descriptionController.text.isEmpty ||
+                      _descriptionController.text.length < 20) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Thông báo'),
+                          content: Text(
+                              'Vui lòng nhập mô tả và mô tả tối thiểu 20 kí tự '),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Đóng'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  } else {
+                    // Display CircularProgressIndicator while processing
+                    showDialog(
+                      context: context,
+                      barrierDismissible:
+                          false, // Prevent user from dismissing dialog
+                      builder: (BuildContext context) {
+                        return Center(
+                          child:
+                              CircularProgressIndicator(), // Display CircularProgressIndicator
+                        );
+                      },
+                    );
+                    await _uploadImages(email); // Ensure this completes
+                    await _uploadVideo(email); // Ensure this completes
+                    String? owner = await MongoDatabase.get_IdfromUser(email);
+                    String address = '';
+                    if (_houseController.text == '') {
+                      address = _streetController.text +
+                          ', ' +
+                          selectedCommuneName +
+                          ', ' +
+                          selectedDistrictName +
+                          ', ' +
+                          selectedProvinceName;
+                    } else {
+                      address = _houseController.text +
+                          ', ' +
+                          _streetController.text +
+                          ', ' +
+                          selectedCommuneName +
+                          ', ' +
+                          selectedDistrictName +
+                          ', ' +
+                          selectedProvinceName;
+                    }
+
+                    Post newPost = Post(
+                      ownerId: owner,
+                      selectedType: _selectedType,
+                      selectedRoomType: _selectedRoomType,
+                      area: int.parse(_areaController.text),
+                      price: int.parse(_priceController.text),
+                      selectedAmenitiesNames: selectedAmenitiesNames,
+                      address: address,
+                      topic: _topicController.text,
+                      phone: _phoneController.text,
+                      zalophone: _zalophoneController.text,
+                      facebookLink: _facebooklinkController.text,
+                      description: _descriptionController.text,
+                      imageUrls: _imageUrls,
+                      videoURL: _videoURL,
+                      status: 'display',
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    bool check = await MongoDatabase.createPost(newPost);
+                    if (check == false) {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Thông báo'),
+                            content: Text(
+                                'Thông tin bài đăng của bạn trùng với 1 bài đăng có trên hệ thông. Xin đừng đăng lại phòng , căn hộ cho thuê hoặc ở ghép nhiều lần'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Đóng'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return;
+                    } else {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => ShowPost()),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
+                  }
+                }
+
+                // Nếu không có lỗi, tiếp tục tới bước tiếp theo
+                if (_currentStep < _getSteps().length - 1) {
+                  setState(() {
+                    _currentStep += 1;
+                  });
+                }
+              },
+              onStepCancel: () {
+                if (_currentStep > 0) {
+                  setState(() {
+                    _currentStep -= 1;
+                  });
+                }
+              },
+              steps: _getSteps(),
+              controlsBuilder:
+                  (BuildContext context, ControlsDetails controls) {
+                return Row(
+                  children: <Widget>[
+                    _currentStep == 3
+                        ? TextButton(
+                            onPressed: controls.onStepContinue,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.blue),
+                            ),
+                            child: const Text(
+                              'Đăng',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : TextButton(
+                            onPressed: controls.onStepContinue,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.blue),
+                            ),
+                            child: const Text(
+                              'Tiếp tục',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                    SizedBox(width: 8),
+                    _currentStep != 0
+                        ? TextButton(
+                            onPressed: controls.onStepCancel,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(Colors.blue),
+                            ),
+                            child: const Text(
+                              'Quay lại',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : Container(),
+                  ],
+                );
+              },
+            ),
     );
   }
 
   // Xac nhan
   final TextEditingController _topicController = TextEditingController();
-  final TextEditingController _ownerController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _zalophoneController = TextEditingController();
   final TextEditingController _facebooklinkController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  bool correctForm = true;
+  bool isPhoneNumber(String input) {
+    // Sử dụng biểu thức chính quy để kiểm tra xem chuỗi có phải là số điện thoại hay không
+    // Biểu thức này sẽ phù hợp với các số điện thoại theo định dạng quốc tế, ví dụ: +12 3456 7890
+    final RegExp phoneRegex = RegExp(r'^(?:\+?84|0)(?:\d{9,10})$');
+    return phoneRegex.hasMatch(input);
+  }
+
+  bool isURL(String input) {
+    // Sử dụng biểu thức chính quy để kiểm tra xem chuỗi có phải là URL hay không
+    final RegExp urlRegex = RegExp(
+        r'^(?:http|https):\/\/(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+(?:\/[^\s]*)?$');
+    return urlRegex.hasMatch(input);
+  }
 
   List<Step> _getSteps() {
     return [
@@ -657,11 +1093,11 @@ class _UpPostState extends State<UpPost> {
         state: _currentStep > 1 ? StepState.complete : StepState.indexed,
       ),
       Step(
-        title: Text('Hình ảnh', style: TextStyle(fontSize: 8)),
+        title: Text('Hình ảnh và Video', style: TextStyle(fontSize: 8)),
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Chọn hình ảnh từ thiết bị của bạn tối đa 6 hình.'),
+            Text('Chọn hình ảnh từ thiết bị của bạn tối đa 6 hình và 1 video.'),
             SizedBox(height: 10),
             Container(
               height: 220, // Có thể cần chỉnh chiều cao tùy theo nhu cầu
@@ -713,10 +1149,44 @@ class _UpPostState extends State<UpPost> {
                 },
               ),
             ),
+            SizedBox(height: 10),
+            Container(
+              height: 100, // Có thể cần chỉnh chiều cao tùy theo nhu cầu
+              width: double.infinity, // Sử dụng chiều rộng toàn màn hình
+              decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
+              child: _selectedVideo == null
+                  ? InkWell(
+                      onTap: pickVideo,
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.5),
+                          border: Border.all(color: Colors.grey),
+                        ),
+                        child: Icon(Icons.add),
+                      ),
+                    )
+                  : InkWell(
+                      onTap: pickVideo,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.video_library),
+                            Text('Video đã chọn'),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
             ElevatedButton.icon(
               onPressed: () {
                 setState(() {
                   _selectedImages.clear();
+                  _selectedVideo = null;
                 });
               },
               icon: Icon(Icons.refresh),
@@ -737,14 +1207,84 @@ class _UpPostState extends State<UpPost> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             TextFormField(
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.text,
               decoration: InputDecoration(
                 hintText: 'Nhập tiêu đề',
                 border: OutlineInputBorder(),
               ),
               controller: _topicController,
               onChanged: (value) {
-                _priceController.text = value;
+                _topicController.text = value;
+              },
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Số điện thoại (liên lạc):',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Nhập số điện thoại của bạn',
+                border: OutlineInputBorder(),
+              ),
+              controller: _phoneController,
+              onChanged: (value) {
+                _phoneController.text = value;
+              },
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Cũng cấp zalo và facebook không bắt buột nhưng giúp cho người tìm trọ có  nhiều phương tiện liên lạc với bạn hơn',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              'Số điện thoại zalo(nếu có):',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            TextFormField(
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Nhập số điện thoại có thể liên hệ zalo với bạn',
+                border: OutlineInputBorder(),
+              ),
+              controller: _zalophoneController,
+              onChanged: (value) {
+                _zalophoneController.text = value;
+              },
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Link tài khoản facebook(nếu có):',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            TextFormField(
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                hintText: 'Nhập đường link facebook của bạn',
+                border: OutlineInputBorder(),
+              ),
+              controller: _facebooklinkController,
+              onChanged: (value) {
+                _facebooklinkController.text = value;
+              },
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Mô tả chi tiết:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            TextFormField(
+              keyboardType: TextInputType.multiline,
+              maxLines:
+                  10, // Cho phép TextFormField tự động điều chỉnh chiều cao
+              decoration: InputDecoration(
+                hintText: 'Nhập mô tả chi tiết của bạn',
+                border: OutlineInputBorder(),
+              ),
+              controller: _descriptionController,
+              onChanged: (value) {
+                _descriptionController.text = value;
               },
             ),
           ],

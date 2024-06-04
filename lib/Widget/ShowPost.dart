@@ -4,6 +4,7 @@ import 'package:post_house_rent_app/Widget/LoginScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../MongoDb_Connect.dart';
 import 'CreatePost.dart';
+import 'package:intl/intl.dart';
 
 class ShowPost extends StatefulWidget {
   @override
@@ -13,14 +14,15 @@ class ShowPost extends StatefulWidget {
 class _ShowPostState extends State<ShowPost> {
   late String username = 'nologin';
   late String imageUrl = 'nologin';
-  late Future<List<Map<String, dynamic>>> _userList;
-
+  late Future<List<Map<String, dynamic>>> _postList;
+  late Future<List<Map<String, dynamic>>> _postShareRoomList;
 
   @override
   void initState() {
     super.initState();
     check_if_already_login();
-    _userList = MongoDatabase.list_test();
+    _postList = MongoDatabase.list_post();
+    _postShareRoomList = MongoDatabase.list_ShareRoomPost();
   }
 
   void check_if_already_login() async {
@@ -39,7 +41,6 @@ class _ShowPostState extends State<ShowPost> {
       username = prefs.getString('username') ?? 'User';
       imageUrl = prefs.getString('image')!;
     });
-    print(imageUrl);
   }
 
   @override
@@ -50,33 +51,33 @@ class _ShowPostState extends State<ShowPost> {
           children: [
             username == "nologin" || imageUrl == "noimage"
                 ? ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                );
-                // Hành động khi nhấn vào nút đăng nhập
-              },
-              child: Text('Đăng nhập'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.tealAccent,
-                foregroundColor: Colors.teal,
-                // Màu nền của nút
-                //color: Colors.teal, // Màu chữ của nút
-              ),
-            )
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                      );
+                      // Hành động khi nhấn vào nút đăng nhập
+                    },
+                    child: Text('Đăng nhập'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.tealAccent,
+                      foregroundColor: Colors.teal,
+                      // Màu nền của nút
+                      //color: Colors.teal, // Màu chữ của nút
+                    ),
+                  )
                 : Row(children: [
-              CircleAvatar(
-                backgroundImage: NetworkImage(imageUrl),
-                radius: 20.0,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Xin chào, ' + username!,
-                style:
-                TextStyle(fontSize: 18.0, color: Colors.tealAccent),
-              ),
-            ]),
+                    CircleAvatar(
+                      backgroundImage: NetworkImage(imageUrl),
+                      radius: 20.0,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Xin chào, ' + username!,
+                      style:
+                          TextStyle(fontSize: 18.0, color: Colors.tealAccent),
+                    ),
+                  ]),
           ],
         ),
         backgroundColor: Colors.teal,
@@ -88,16 +89,15 @@ class _ShowPostState extends State<ShowPost> {
             ),
             onPressed: () {
               // Action when the add post button is pressed
-               Navigator.push(
-                 context,
-                 MaterialPageRoute(builder: (context) => UpPost()),
-               );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UpPost()),
+              );
             },
           ),
         ],
       ),
-      body:
-      ListView(
+      body: ListView(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +108,7 @@ class _ShowPostState extends State<ShowPost> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Tin mới đăng',
+                      'Tin phòng, căn hộ mới đăng',
                       style: TextStyle(
                           fontSize: 24.0,
                           fontWeight: FontWeight.bold,
@@ -127,7 +127,7 @@ class _ShowPostState extends State<ShowPost> {
                 ),
               ),
               FutureBuilder<List<Map<String, dynamic>>>(
-                future: _userList,
+                future: _postList,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -142,11 +142,38 @@ class _ShowPostState extends State<ShowPost> {
                         childAspectRatio: 2.9 /
                             4, // Chỉnh tỷ lệ chiều rộng và chiều cao của mỗi mục
                       ),
-                      itemCount: 6,
+                      itemCount:
+                          snapshot.data!.length < 7 ? snapshot.data?.length : 6,
+
                       padding: EdgeInsets.all(8.0),
                       // Khoảng cách giữa các mục
                       itemBuilder: (context, index) {
-                        var user = snapshot.data![index];
+                        var post = snapshot.data![index];
+                        DateTime now = DateTime.now();
+                        DateTime postCreatedAt =
+                            DateTime.parse(post['createdAt']);
+                        Duration difference = now.difference(postCreatedAt);
+                        String formattedTime;
+                        if (difference.inMinutes < 60) {
+                          formattedTime = "${difference.inMinutes} phút trước";
+                        } else if (difference.inHours < 24) {
+                          formattedTime = "${difference.inHours} giờ trước";
+                        } else if (difference.inDays < 7) {
+                          formattedTime = "${difference.inDays} ngày trước";
+                        } else {
+                          formattedTime =
+                              DateFormat('dd/MM/yyyy').format(postCreatedAt);
+                        }
+                        var price = post['price'] / 100000;
+                        String gia = '';
+                        if (price < 10) {
+                          price = price * 100;
+                          gia = price.toString() + ' Ngàn';
+                        } else {
+                          price = price / 10;
+                          gia = price.toString() + ' Triệu';
+                        }
+
                         return InkWell(
                           onTap: () {
                             // Action when a user card is tapped
@@ -164,7 +191,7 @@ class _ShowPostState extends State<ShowPost> {
                               child: Column(
                                 children: [
                                   Image.network(
-                                    "https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2FProduct.jfif?alt=media&token=4d9630b0-e6c4-4337-a82b-09788b779927",
+                                    post['imageUrls'][0],
                                     fit: BoxFit.cover,
                                     // Đảm bảo hình ảnh vừa với kích thước của card
                                     height: 104,
@@ -172,7 +199,7 @@ class _ShowPostState extends State<ShowPost> {
                                     width: double
                                         .infinity, // Đảm bảo hình ảnh rộng bằng card
                                   ),
-                                  SizedBox(height: 8),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -182,9 +209,9 @@ class _ShowPostState extends State<ShowPost> {
                                               color: Colors.tealAccent),
                                         ),
                                         TextSpan(
-                                          text: " " + user['name'],
+                                          text: " " + post['address'],
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
@@ -192,6 +219,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -202,17 +230,18 @@ class _ShowPostState extends State<ShowPost> {
                                         ),
                                         TextSpan(
                                           text: "Diện tích: " +
-                                              user['area'].toString() +
+                                              post['area'].toString() +
                                               " m2",
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
                                       ],
                                     ),
                                     overflow: TextOverflow.ellipsis,
-                                  ), // Khoảng cách giữa hình ảnh và văn bản
+                                  ),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -222,9 +251,9 @@ class _ShowPostState extends State<ShowPost> {
                                               color: Colors.tealAccent),
                                         ),
                                         TextSpan(
-                                          text: " 3 phút trước",
+                                          text: ' ' + formattedTime,
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
@@ -232,34 +261,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "Người Đăng: ",
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.tealAccent),
-                                        ),
-                                        WidgetSpan(
-                                          child: CircleAvatar(
-                                            backgroundImage: NetworkImage(
-                                                'https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2Fuser.jpg?alt=media&token=0238633c-16cc-431e-9a18-987b26e95697'),
-                                            radius: 10.0,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: " Minh Trí",
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.tealAccent),
-                                        ),
-                                      ],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  SizedBox(height: 25),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -268,9 +270,7 @@ class _ShowPostState extends State<ShowPost> {
                                               size: 20, color: Colors.white),
                                         ),
                                         TextSpan(
-                                          text: "Giá: " +
-                                              user['age'].toString() +
-                                              " triệu",
+                                          text: "Giá: " + gia,
                                           style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
@@ -288,7 +288,7 @@ class _ShowPostState extends State<ShowPost> {
                       },
                     );
                   } else {
-                    return Center(child: Text("No users found"));
+                    return Center(child: Text("No post found"));
                   }
                 },
               ),
@@ -303,7 +303,7 @@ class _ShowPostState extends State<ShowPost> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Phòng ở ghép',
+                      'Tin ở ghép mới đăng',
                       style: TextStyle(
                           fontSize: 24.0,
                           fontWeight: FontWeight.bold,
@@ -322,7 +322,7 @@ class _ShowPostState extends State<ShowPost> {
                 ),
               ),
               FutureBuilder<List<Map<String, dynamic>>>(
-                future: _userList,
+                future: _postShareRoomList,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -337,11 +337,37 @@ class _ShowPostState extends State<ShowPost> {
                         childAspectRatio: 2.9 /
                             4, // Chỉnh tỷ lệ chiều rộng và chiều cao của mỗi mục
                       ),
-                      itemCount: 6,
+                      itemCount:
+                          snapshot.data!.length < 7 ? snapshot.data?.length : 6,
                       padding: EdgeInsets.all(8.0),
                       // Khoảng cách giữa các mục
                       itemBuilder: (context, index) {
-                        var user = snapshot.data![index];
+                        var post = snapshot.data![index];
+                        DateTime now = DateTime.now();
+                        DateTime postCreatedAt =
+                            DateTime.parse(post['createdAt']);
+                        Duration difference = now.difference(postCreatedAt);
+                        String formattedTime;
+                        if (difference.inMinutes < 60) {
+                          formattedTime = "${difference.inMinutes} phút trước";
+                        } else if (difference.inHours < 24) {
+                          formattedTime = "${difference.inHours} giờ trước";
+                        } else if (difference.inDays < 7) {
+                          formattedTime = "${difference.inDays} ngày trước";
+                        } else {
+                          formattedTime =
+                              DateFormat('dd/MM/yyyy').format(postCreatedAt);
+                        }
+                        var price = post['price'] / 100000;
+                        String gia = '';
+                        if (price < 10) {
+                          price = price * 100;
+                          gia = price.toString() + ' Ngàn';
+                        } else {
+                          price = price / 10;
+                          gia = price.toString() + ' Triệu';
+                        }
+
                         return InkWell(
                           onTap: () {
                             // Action when a user card is tapped
@@ -359,7 +385,7 @@ class _ShowPostState extends State<ShowPost> {
                               child: Column(
                                 children: [
                                   Image.network(
-                                    "https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2FProduct.jfif?alt=media&token=4d9630b0-e6c4-4337-a82b-09788b779927",
+                                    post['imageUrls'][0],
                                     fit: BoxFit.cover,
                                     // Đảm bảo hình ảnh vừa với kích thước của card
                                     height: 104,
@@ -367,7 +393,7 @@ class _ShowPostState extends State<ShowPost> {
                                     width: double
                                         .infinity, // Đảm bảo hình ảnh rộng bằng card
                                   ),
-                                  SizedBox(height: 8),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -377,9 +403,9 @@ class _ShowPostState extends State<ShowPost> {
                                               color: Colors.tealAccent),
                                         ),
                                         TextSpan(
-                                          text: " " + user['name'],
+                                          text: " " + post['address'],
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
@@ -387,6 +413,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -397,18 +424,18 @@ class _ShowPostState extends State<ShowPost> {
                                         ),
                                         TextSpan(
                                           text: "Diện tích: " +
-                                              user['area'].toString() +
+                                              post['area'].toString() +
                                               " m2",
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
                                       ],
                                     ),
                                     overflow: TextOverflow.ellipsis,
-                                  ), // Khoảng cách giữa hình ảnh và văn bản
-
+                                  ),
+                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -418,9 +445,9 @@ class _ShowPostState extends State<ShowPost> {
                                               color: Colors.tealAccent),
                                         ),
                                         TextSpan(
-                                          text: " 3 phút trước",
+                                          text: ' ' + formattedTime,
                                           style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.tealAccent),
                                         ),
@@ -428,34 +455,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "Người Đăng: ",
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.tealAccent),
-                                        ),
-                                        WidgetSpan(
-                                          child: CircleAvatar(
-                                            backgroundImage: NetworkImage(
-                                                'https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2Fuser.jpg?alt=media&token=0238633c-16cc-431e-9a18-987b26e95697'),
-                                            radius: 10.0,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: " Minh Trí",
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.tealAccent),
-                                        ),
-                                      ],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  SizedBox(height: 25),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -464,9 +464,7 @@ class _ShowPostState extends State<ShowPost> {
                                               size: 20, color: Colors.white),
                                         ),
                                         TextSpan(
-                                          text: "Gía: " +
-                                              user['age'].toString() +
-                                              " triệu",
+                                          text: "Giá: " + gia,
                                           style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
@@ -484,7 +482,7 @@ class _ShowPostState extends State<ShowPost> {
                       },
                     );
                   } else {
-                    return Center(child: Text("No users found"));
+                    return Center(child: Text("No post found"));
                   }
                 },
               ),
