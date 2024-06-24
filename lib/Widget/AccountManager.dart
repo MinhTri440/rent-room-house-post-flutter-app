@@ -13,6 +13,7 @@ class AccountManager extends StatefulWidget {
 class _AccountManagerState extends State<AccountManager> {
   String username = 'nologin';
   String imageUrl = 'nologin';
+  String typeAccount = '';
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _AccountManagerState extends State<AccountManager> {
       username = prefs.getString('username') ?? 'User';
       imageUrl =
           prefs.getString('image') ?? 'https://example.com/default-avatar.png';
+      typeAccount = prefs.getString('type')!;
     });
   }
 
@@ -91,40 +93,39 @@ class _AccountManagerState extends State<AccountManager> {
                   ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(imageUrl),
-                    radius: 40.0,
+            : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(imageUrl),
+                  radius: 40.0,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  '$username',
+                  style: TextStyle(fontSize: 28.0, color: Colors.teal),
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _logout,
+                  child: Text('Đăng xuất'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.tealAccent,
+                    foregroundColor: Colors.teal,
+                    // Màu chữ của nút
                   ),
-                  SizedBox(height: 10),
-                  Text(
-                    '$username',
-                    style: TextStyle(fontSize: 28.0, color: Colors.teal),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _logout,
-                    child: Text('Đăng xuất'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.tealAccent,
-                      foregroundColor: Colors.teal,
-                      // Màu chữ của nút
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
+                ),
+                SizedBox(height: 20),
+                Visibility(
+                  visible: typeAccount == 'system',
+                  child: ElevatedButton(
                     onPressed: _showInformationAccount,
                     child: Text('Thông tin tài khoản'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.tealAccent,
                       foregroundColor: Colors.teal,
-                      // Màu chữ của nút
                     ),
                   ),
-                ],
-              ),
+                ),
+              ]),
       ),
     );
   }

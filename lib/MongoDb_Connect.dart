@@ -167,4 +167,54 @@ class MongoDatabase {
         user.find({'selectedType': 'Tìm người ở ghép'}).toList();
     return search;
   }
+
+  static Future<List<Map<String, dynamic>>> list_search_post(
+      String province, String district, String commune) async {
+    var db = await Db.create(MONGO_URL);
+    await db.open();
+    var post = db.collection('Post');
+
+    List<Map<String, dynamic>> search;
+
+    // When all parameters are empty, return all documents
+    if (province.isEmpty && district.isEmpty && commune.isEmpty) {
+      search = await post.find().toList();
+      await db.close();
+      return search;
+    }
+
+    // Construct the query
+    var query = where;
+    if (province.isNotEmpty && district.isEmpty && commune.isEmpty) {
+      String searchStr = '$province';
+      query = query.eq('address', RegExp(searchStr));
+    }
+
+    if (province.isNotEmpty && district.isNotEmpty && commune.isEmpty) {
+      String searchStr = '$district, $province';
+      query = query.eq('address', RegExp(searchStr));
+    } else if (province.isNotEmpty &&
+        district.isNotEmpty &&
+        commune.isNotEmpty) {
+      String searchStr = '$commune, $district, $province';
+      query = query.eq('address', RegExp(searchStr));
+    }
+
+    // Execute the query
+    search = await post.find(query).toList();
+
+    await db.close();
+    return search;
+  }
+
+  static Future<List<Map<String, dynamic>>> fillter_Post(
+      String selectedType) async {
+    var db = await Db.create(MONGO_URL);
+    await db.open();
+    inspect(db);
+    var user = db.collection('Post');
+    Future<List<Map<String, dynamic>>> search =
+        user.find({'selectedType': selectedType}).toList();
+    return search;
+  }
 }

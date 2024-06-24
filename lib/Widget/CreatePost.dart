@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:post_house_rent_app/MongoDb_Connect.dart';
+import 'package:post_house_rent_app/Widget/HomeScreen.dart';
 import 'package:post_house_rent_app/Widget/ShowPost.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,11 +24,23 @@ class _UpPostState extends State<UpPost> {
     super.initState();
     check_if_already_login();
     fetchProvinces();
+    _loadPhoneData();
   }
 
   late String username = 'nologin';
   late String imageUrl = 'nologin';
   late String email = 'nologin';
+  final TextEditingController _phoneController = TextEditingController();
+  Future<void> _loadPhoneData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    Map<String, dynamic>? search =
+        await MongoDatabase.getUser(prefs.getString('email'));
+    setState(() {
+      _phoneController.text = search?['phone'];
+      // Đánh dấu đã tải xong dữ liệu
+    });
+  }
+
   void check_if_already_login() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs = await SharedPreferences.getInstance();
@@ -107,8 +120,8 @@ class _UpPostState extends State<UpPost> {
   String selectedCommuneName = '';
 
   Future<void> fetchProvinces() async {
-    final response = await http
-        .get(Uri.parse('https://toinh-api-tinh-thanh.onrender.com/province'));
+    final response = await http.get(Uri.parse(
+        'https://api-tinh-thanh-git-main-toiyours-projects.vercel.app/province'));
     if (response.statusCode == 200) {
       setState(() {
         provinces = json.decode(response.body);
@@ -134,7 +147,7 @@ class _UpPostState extends State<UpPost> {
 
   Future<void> fetchCommunes(String idDistrict) async {
     final response = await http.get(Uri.parse(
-        'https://toinh-api-tinh-thanh.onrender.com/commune?idDistrict=$idDistrict'));
+        'https://api-tinh-thanh-git-main-toiyours-projects.vercel.app/commune?idDistrict=$idDistrict'));
     if (response.statusCode == 200) {
       setState(() {
         communes = json.decode(response.body);
@@ -622,7 +635,7 @@ class _UpPostState extends State<UpPost> {
                     } else {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (context) => ShowPost()),
+                        MaterialPageRoute(builder: (context) => HomeScreen()),
                         (Route<dynamic> route) => false,
                       );
                     }
@@ -694,10 +707,10 @@ class _UpPostState extends State<UpPost> {
 
   // Xac nhan
   final TextEditingController _topicController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _zalophoneController = TextEditingController();
   final TextEditingController _facebooklinkController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+
   bool correctForm = true;
   bool isPhoneNumber(String input) {
     // Sử dụng biểu thức chính quy để kiểm tra xem chuỗi có phải là số điện thoại hay không

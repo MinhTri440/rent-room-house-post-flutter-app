@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../MongoDb_Connect.dart';
 import 'CreatePost.dart';
 import 'package:intl/intl.dart';
+import 'package:post_house_rent_app/Widget/DetailPage.dart';
 
 class ShowPost extends StatefulWidget {
   @override
@@ -110,7 +111,7 @@ class _ShowPostState extends State<ShowPost> {
                     Text(
                       'Tin phòng, căn hộ mới đăng',
                       style: TextStyle(
-                          fontSize: 24.0,
+                          fontSize: 18.0,
                           fontWeight: FontWeight.bold,
                           color: Colors.teal),
                     ),
@@ -120,7 +121,7 @@ class _ShowPostState extends State<ShowPost> {
                       },
                       child: Text(
                         'Xem thêm',
-                        style: TextStyle(fontSize: 16.0, color: Colors.teal),
+                        style: TextStyle(fontSize: 14.0, color: Colors.teal),
                       ),
                     )
                   ],
@@ -168,7 +169,7 @@ class _ShowPostState extends State<ShowPost> {
                         String gia = '';
                         if (price < 10) {
                           price = price * 100;
-                          gia = price.toString() + ' Ngàn';
+                          gia = price.toString() + ' K';
                         } else {
                           price = price / 10;
                           gia = price.toString() + ' Triệu';
@@ -177,10 +178,11 @@ class _ShowPostState extends State<ShowPost> {
                         return InkWell(
                           onTap: () {
                             // Action when a user card is tapped
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(builder: (context) => DetailPage(user: user)),
-                            // );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => DetailPage(post: post)),
+                            );
                           },
                           child: Card(
                             color: Colors.teal,
@@ -219,7 +221,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 10),
+                                  //SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -241,7 +243,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 10),
+                                  //SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -261,7 +263,7 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 25),
+                                  //SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -272,7 +274,7 @@ class _ShowPostState extends State<ShowPost> {
                                         TextSpan(
                                           text: "Giá: " + gia,
                                           style: TextStyle(
-                                              fontSize: 20,
+                                              fontSize: 18,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white),
                                         ),
@@ -305,7 +307,7 @@ class _ShowPostState extends State<ShowPost> {
                     Text(
                       'Tin ở ghép mới đăng',
                       style: TextStyle(
-                          fontSize: 24.0,
+                          fontSize: 18.0,
                           fontWeight: FontWeight.bold,
                           color: Colors.teal),
                     ),
@@ -315,7 +317,7 @@ class _ShowPostState extends State<ShowPost> {
                       },
                       child: Text(
                         'Xem thêm',
-                        style: TextStyle(fontSize: 16.0, color: Colors.teal),
+                        style: TextStyle(fontSize: 14.0, color: Colors.teal),
                       ),
                     )
                   ],
@@ -362,7 +364,7 @@ class _ShowPostState extends State<ShowPost> {
                         String gia = '';
                         if (price < 10) {
                           price = price * 100;
-                          gia = price.toString() + ' Ngàn';
+                          gia = price.toString() + ' K';
                         } else {
                           price = price / 10;
                           gia = price.toString() + ' Triệu';
@@ -371,10 +373,11 @@ class _ShowPostState extends State<ShowPost> {
                         return InkWell(
                           onTap: () {
                             // Action when a user card is tapped
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(builder: (context) => DetailPage(user: user)),
-                            // );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => DetailPage(post: post)),
+                            );
                           },
                           child: Card(
                             color: Colors.teal,

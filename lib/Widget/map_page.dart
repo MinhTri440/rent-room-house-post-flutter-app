@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:post_house_rent_app/MongoDb_Connect.dart';
 import 'package:post_house_rent_app/Widget/HomeScreen.dart';
+import 'package:geocoding/geocoding.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -12,57 +14,64 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
-  Set<Marker> _markers = {};// Set để lưu trữ các đường đi (polyline)
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
+  Set<Marker> _markers = {}; // Set để lưu trữ các marker
 
-  static const LatLng _postHouse = LatLng(10.7069207, 106.6768502);
-  static const LatLng _testCurrent= LatLng(10.732639899999999,106.69976390000001);
-  static const LatLng _postHouse2 = LatLng(21.030701, 105.8010413);
   static const CameraPosition _kGooglePlex = CameraPosition(
-    target: LatLng(10.732639899999999,106.69976390000001 ),
+    target: LatLng(10.732639899999999, 106.69976390000001),
     zoom: 14.4746,
   );
 
   @override
   void initState() {
     super.initState();
-    _markers.add(
-      Marker(
-        markerId: const MarkerId("_postHouse"),
-        icon: BitmapDescriptor.defaultMarker,
-        position: _postHouse,
-        onTap: () {
-          _showInfoWindow("500,000 VND", "100 m2", "https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2Fuser.jpg?alt=media&token=0238633c-16cc-431e-9a18-987b26e95697");
-        },
-      ),
+    _initializeMarkers();
+  }
 
-    );
-    _markers.add(
-      Marker(
-        markerId: const MarkerId("_testCurrent"),
-        icon: BitmapDescriptor.defaultMarker,
-        position: _testCurrent,
-        onTap: () {
-          _showInfoWindow("500,000 VND", "100 m2", "https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2Fuser.jpg?alt=media&token=0238633c-16cc-431e-9a18-987b26e95697");
-        },
-      ),
-
-    );
-    _markers.add(
+  Future<void> _initializeMarkers() async {
+    List<Map<String, dynamic>> markerData = await MongoDatabase.list_post();
+    Set<Marker> markers = {};
+    for (var marker in markerData) {
+      markers.add(
         Marker(
-          markerId: const MarkerId("_testCurrent"),
-          icon: BitmapDescriptor.defaultMarker,
-          position: _postHouse2,
+          markerId: MarkerId(marker['_id'].toString()),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          position: await _getLocationFromAddress(marker['address']),
           onTap: () {
-            _showInfoWindow("500,000 VND", "100 m2", "https://firebasestorage.googleapis.com/v0/b/post-room-house-rent.appspot.com/o/images%2Fuser.jpg?alt=media&token=0238633c-16cc-431e-9a18-987b26e95697");
+            _showInfoWindow(marker['price'].toString() + ' VND',
+                marker['area'].toString() + ' m2', marker['imageUrls'][0]);
           },
         ),
-        );
+      );
+    }
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  Future<LatLng> _getLocationFromAddress(String address) async {
+    try {
+      List<String> addressParts = address.split(',');
+      if (addressParts.length <= 2) {
+        // Chỉ lấy nội dung sau dấu phẩy đầu tiên
+        address = addressParts.last.trim();
+      }
+      List<Location> locations = await locationFromAddress(address);
+      if (locations.isNotEmpty) {
+        return LatLng(locations[0].latitude, locations[0].longitude);
+      } else {
+        return LatLng(0, 0);
+      }
+    } catch (e) {
+      print(e.toString());
+      return LatLng(0, 0);
+    }
   }
 
   // Hiển thị info window
 
-// Lay vi tri hien taij
   Future<void> _addCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -78,7 +87,8 @@ class _MapPageState extends State<MapPage> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return Future.error('Location permissions are permanently denied, we cannot request permissions.');
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
     }
 
     Position position = await Geolocator.getCurrentPosition();
@@ -97,11 +107,15 @@ class _MapPageState extends State<MapPage> {
     final GoogleMapController controller = await _controller.future;
     controller.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 15));
   }
-// Hiển thị info window
-  void _showInfoWindow( String price, String area, String imageUrl) {
+
+  // Hiển thị info window
+  void _showInfoWindow(String price, String area, String imageUrl) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return GestureDetector(
           onTap: () {
@@ -115,16 +129,55 @@ class _MapPageState extends State<MapPage> {
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
             child: Container(
-              height: 320,
-              padding: EdgeInsets.all(10),
+              padding: EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min, // Đảm bảo chiều cao tối thiểu
                 children: [
-                  Image.network(imageUrl),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Image.network(
+                      imageUrl,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                   SizedBox(height: 10),
-                  Text("Giá: $price"),
-                  Text("Diện tích: $area"),
+                  Text(
+                    "Giá: $price",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    "Diện tích: $area",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => HomeScreen()),
+                      );
+                    },
+                    icon: Icon(Icons.info_outline),
+                    label: Text("Xem chi tiết"),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -134,35 +187,28 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body:
-      Stack(
-        children: [
-          GoogleMap(
-        mapType: MapType.terrain,
-        initialCameraPosition: _kGooglePlex,
-        onMapCreated: (GoogleMapController controller) {
-          _controller.complete(controller);
-        },
-        markers: _markers,
-      ),
-      Positioned(
-        bottom: 16,
-        left: 16,
-        child: FloatingActionButton(
-          onPressed: _addCurrentLocation,
-          child: const Icon(Icons.location_searching),
-          tooltip: 'Get Current Location',
+      body: Stack(children: [
+        GoogleMap(
+          mapType: MapType.terrain,
+          initialCameraPosition: _kGooglePlex,
+          onMapCreated: (GoogleMapController controller) {
+            _controller.complete(controller);
+          },
+          markers: _markers,
         ),
-      ),
-      ]
-
-    ),
+        Positioned(
+          bottom: 16,
+          left: 16,
+          child: FloatingActionButton(
+            onPressed: _addCurrentLocation,
+            child: const Icon(Icons.location_searching),
+            tooltip: 'Get Current Location',
+          ),
+        ),
+      ]),
     );
-
   }
 }

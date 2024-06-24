@@ -187,18 +187,6 @@ class _InformationAccountState extends State<InformationAccount> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Email:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
                     'Số điện thoại:',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
