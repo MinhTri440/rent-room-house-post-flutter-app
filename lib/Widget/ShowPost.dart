@@ -1,11 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:post_house_rent_app/Widget/HomeScreen.dart';
 import 'package:post_house_rent_app/Widget/LoginScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../MongoDb_Connect.dart';
 import 'CreatePost.dart';
 import 'package:intl/intl.dart';
 import 'package:post_house_rent_app/Widget/DetailPage.dart';
+import 'package:post_house_rent_app/Widget/AllPosts.dart';
+import 'package:post_house_rent_app/Widget/AllSharePosts.dart';
 
 class ShowPost extends StatefulWidget {
   @override
@@ -117,6 +120,10 @@ class _ShowPostState extends State<ShowPost> {
                     ),
                     TextButton(
                       onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Allposts()),
+                        );
                         // Action when the view more button is pressed
                       },
                       child: Text(
@@ -314,6 +321,11 @@ class _ShowPostState extends State<ShowPost> {
                     TextButton(
                       onPressed: () {
                         // Action when the view more button is pressed
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => AllSharePosts()),
+                        );
                       },
                       child: Text(
                         'Xem thêm',
@@ -416,7 +428,6 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -438,7 +449,6 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 10),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -458,7 +468,6 @@ class _ShowPostState extends State<ShowPost> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 25),
                                   RichText(
                                     text: TextSpan(
                                       children: [
@@ -469,7 +478,7 @@ class _ShowPostState extends State<ShowPost> {
                                         TextSpan(
                                           text: "Giá: " + gia,
                                           style: TextStyle(
-                                              fontSize: 20,
+                                              fontSize: 18,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white),
                                         ),

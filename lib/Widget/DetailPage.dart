@@ -2,6 +2,7 @@ import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 List<Map<String, dynamic>> amenities = [
@@ -96,7 +97,7 @@ class _DetailPageState extends State<DetailPage> {
     String gia = '';
     if (price < 10) {
       price = price * 100;
-      gia = price.toString() + ' Ngàn';
+      gia = price.toString() + ' K';
     } else {
       price = price / 10;
       gia = price.toString() + ' Triệu';
@@ -284,12 +285,33 @@ class _DetailPageState extends State<DetailPage> {
                                   ),
                                 ),
                                 ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pop(
-                                        context); // Đóng bottom sheet sau khi áp dụng
+                                  onPressed: () async {
+                                    // Navigator.pop(
+                                    //     context); // Đóng bottom sheet sau khi áp dụng_makePhoneCall(
+                                    final Uri url = Uri(
+                                        scheme: 'tel',
+                                        path: "${widget.post['phone']}");
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url);
+                                    } else {
+                                      print('cannot lauch this url');
+                                    }
                                   },
                                   child: Text('Gọi'),
                                 ),
+                                if (widget.post['zalophone'] != "")
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      final url =
+                                          "https://zalo.me/${widget.post['zalophone']}";
+                                      if (await canLaunch(url)) {
+                                        await launch(url);
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                    child: Text('Liên hệ zalo'),
+                                  ),
                               ],
                             ),
                           );

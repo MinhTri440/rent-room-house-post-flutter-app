@@ -45,6 +45,7 @@ dependencies:
   connectivity_plus: ^6.0.3
   image_picker: ^1.1.1
   video_player: ^2.8.7
+  url_launcher: ^6.3.0
 
   #chat demo
   cloud_firestore: ^4.17.3

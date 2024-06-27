@@ -81,6 +81,12 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>We need access to your microphone for recording videos.</string>
 
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>sms</string>
+      <string>tel</string>
+    </array>
+
 
 
 </dict>

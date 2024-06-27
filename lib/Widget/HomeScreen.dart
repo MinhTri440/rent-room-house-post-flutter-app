@@ -8,7 +8,6 @@ import 'package:post_house_rent_app/Widget/map_page.dart';
 
 import '../CheckInternet.dart';
 
-
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -30,13 +29,29 @@ class _HomeScreenState extends State<HomeScreen> {
     TestPageWidget(),
   ];
 
+  Future<void> _refresh() async {
+    // Giả lập việc làm mới dữ liệu
+    await Future.delayed(Duration(seconds: 2));
+    setState(() {
+      // Cập nhật lại state để làm mới màn hình
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+        (Route<dynamic> route) => false,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ConnectivityWidgetWrapper(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _widgetOptions,
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: IndexedStack(
+            index: _currentIndex,
+            children: _widgetOptions,
+          ),
         ),
       ),
       backgroundColor: Colors.white,
@@ -85,14 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
             ),
-            IconButton(
-              icon: Icon(Icons.check_box, color: Colors.tealAccent),
-              onPressed: () {
-                setState(() {
-                  _currentIndex = 4;
-                });
-              },
-            ),
           ],
         ),
       ),
@@ -120,13 +127,14 @@ class AccountWidget extends StatelessWidget {
     return AccountManager(); // Your account screen content here
   }
 }
-class MapPageWidget extends StatelessWidget{
+
+class MapPageWidget extends StatelessWidget {
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return MapPage();
   }
-
 }
+
 class TestPageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

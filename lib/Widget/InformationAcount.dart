@@ -1,7 +1,14 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:email_validator/email_validator.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:post_house_rent_app/MongoDb_Connect.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'HomeScreen.dart';
 
 class InformationAccount extends StatefulWidget {
   const InformationAccount({super.key});
@@ -32,8 +39,57 @@ class _InformationAccountState extends State<InformationAccount> {
     Map<String, dynamic>? search =
         await MongoDatabase.getUser(prefs.getString('email'));
     setState(() {
+      email = prefs.getString('email')!;
       _phoneController.text = search?['phone'];
       _isLoading = false; // Đánh dấu đã tải xong dữ liệu
+    });
+  }
+
+  // Hàm để chọn hình ảnh từ thư viện máy và lưu lên Firebase Storage
+  Future<void> _updateImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) return; // Người dùng không chọn ảnh
+
+    String fileName =
+        '${_nameController.text}_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    Reference firebaseStorageRef =
+        FirebaseStorage.instance.ref().child('avatars/$fileName');
+    UploadTask uploadTask = firebaseStorageRef.putFile(File(image.path));
+
+    uploadTask.then((TaskSnapshot taskSnapshot) async {
+      String downloadUrl = await taskSnapshot.ref.getDownloadURL();
+      setState(() {
+        imageUrl = downloadUrl;
+      });
+      bool updateImage = await MongoDatabase.UpdateUserImage(email, imageUrl);
+
+      // Cập nhật imageUrl trong SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('image', imageUrl);
+      setState(() {
+        CircleAvatar(
+          radius: 50,
+          backgroundImage: NetworkImage(imageUrl),
+        );
+      });
+
+      // Hiển thị thông báo cập nhật thành công (Optional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cập nhật avatar thành công'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }).catchError((onError) {
+      // Xử lý lỗi khi tải lên Firebase (Optional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cập nhật avatar thất bại'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     });
   }
 
@@ -44,7 +100,7 @@ class _InformationAccountState extends State<InformationAccount> {
     return phoneRegex.hasMatch(input);
   }
 
-  void _SaveInformation() {
+  Future<void> _SaveInformation() async {
     if (_nameController.text.isEmpty) {
       showDialog(
         context: context,
@@ -128,6 +184,31 @@ class _InformationAccountState extends State<InformationAccount> {
       );
       return;
     }
+    bool update = await MongoDatabase.UpdateUser(
+        email, _nameController.text, _phoneController.text);
+    if (update) {
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cập nhật thông tin thành công'),
+          duration: Duration(seconds: 2), // Optional duration
+        ),
+      );
+
+      // Save username to SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      setState(() {
+        prefs.setString('username', _nameController.text);
+      });
+    } else {
+      // Show error message if update failed (optional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cập nhật thông tin thất bại'),
+          duration: Duration(seconds: 2), // Optional duration
+        ),
+      );
+    }
   }
 
   @override
@@ -167,7 +248,8 @@ class _InformationAccountState extends State<InformationAccount> {
                   SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      _SaveInformation();
+                      _updateImage();
+                      //_SaveInformation();
                       // Thực hiện lưu các thông tin đã sửa đổi
                       print("Đã lưu thông tin");
                     },

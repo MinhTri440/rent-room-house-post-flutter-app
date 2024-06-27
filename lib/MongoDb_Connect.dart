@@ -154,7 +154,8 @@ class MongoDatabase {
     await db.open();
     inspect(db);
     var user = db.collection('Post');
-    Future<List<Map<String, dynamic>>> search = user.find().toList();
+    Future<List<Map<String, dynamic>>> search =
+        user.find({'selectedType': 'Cho thuê'}).toList();
     return search;
   }
 
@@ -216,5 +217,53 @@ class MongoDatabase {
     Future<List<Map<String, dynamic>>> search =
         user.find({'selectedType': selectedType}).toList();
     return search;
+  }
+
+  static Future<bool> UpdateUser(
+      String? email, String? name, String? phone) async {
+    try {
+      var db = await Db.create(MONGO_URL);
+      await db.open();
+      var users = db.collection('User');
+
+      // Tìm user theo email và cập nhật các trường name và phone
+      var result = await users.updateOne(
+        where.eq('email', email),
+        modify
+            .set('username', name)
+            .set('phone', phone)
+            .set('updateAt', DateTime.now()),
+      );
+
+      await db.close();
+
+      // Kiểm tra xem update có thành công hay không
+      return result.isSuccess;
+    } catch (e) {
+      print('Error updating user: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> UpdateUserImage(String? email, String? ImageUrl) async {
+    try {
+      var db = await Db.create(MONGO_URL);
+      await db.open();
+      var users = db.collection('User');
+
+      // Tìm user theo email và cập nhật các trường name và phone
+      var result = await users.updateOne(
+        where.eq('email', email),
+        modify.set('image', ImageUrl).set('updateAt', DateTime.now()),
+      );
+
+      await db.close();
+
+      // Kiểm tra xem update có thành công hay không
+      return result.isSuccess;
+    } catch (e) {
+      print('Error updating user: $e');
+      return false;
+    }
   }
 }
